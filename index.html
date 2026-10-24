@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>dreamcore — surreal memory</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Space+Mono&display=swap');
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: #1a1830;
+        overflow-x: hidden;
+        font-family: 'Space Mono', monospace;
+      }
+
+      #scroll-container {
+        height: 600vh;
+        position: relative;
+      }
+
+      #canvas-wrapper {
+        position: fixed;
+        inset: 0;
+        z-index: 1;
+      }
+
+      canvas {
+        display: block;
+      }
+
+      /* ── Scene title overlays ── */
+      #scene-ui {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        pointer-events: none;
+      }
+
+      .scene-title {
+        position: absolute;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.8s ease, transform 0.8s ease;
+        pointer-events: none;
+      }
+      .scene-title.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .scene-title .chapter {
+        font-size: 9px;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+        color: rgba(180, 165, 235, 0.65);
+        margin-bottom: 0.4rem;
+      }
+      .scene-title .name {
+        font-family: 'IM Fell English', serif;
+        font-style: italic;
+        font-size: clamp(2rem, 5vw, 3.5rem);
+        color: rgba(235, 228, 255, 0.92);
+        line-height: 1.1;
+        text-shadow: 0 0 60px rgba(140, 100, 220, 0.4);
+      }
+      .scene-title .desc {
+        font-size: 11px;
+        color: rgba(150, 135, 200, 0.75);
+        margin-top: 0.5rem;
+        letter-spacing: 0.05em;
+      }
+
+      /* ── Progress dots ── */
+      #progress-bar {
+        position: fixed;
+        bottom: 2rem;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 20;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .dot {
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: rgba(140, 100, 200, 0.25);
+        border: 0.5px solid rgba(140, 100, 200, 0.4);
+        transition: all 0.4s ease;
+      }
+      .dot.active {
+        background: rgba(160, 120, 240, 0.8);
+        width: 20px;
+        border-radius: 2px;
+      }
+
+      /* ── Scroll hint ── */
+      #scroll-hint {
+        position: fixed;
+        bottom: 4rem;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 20;
+        text-align: center;
+        animation: floatHint 2s ease-in-out infinite;
+        transition: opacity 1s;
+      }
+      #scroll-hint p {
+        font-size: 9px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: rgba(140, 110, 200, 0.5);
+      }
+      #scroll-hint .arrow {
+        display: block;
+        font-size: 16px;
+        color: rgba(140, 110, 200, 0.3);
+        margin-top: 4px;
+      }
+      @keyframes floatHint {
+        0%,
+        100% {
+          transform: translateX(-50%) translateY(0);
+        }
+        50% {
+          transform: translateX(-50%) translateY(6px);
+        }
+      }
+
+      /* ── VHS CSS overlay ── */
+      #vhs-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 5;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 1s;
+        background: repeating-linear-gradient(
+          0deg,
+          rgba(0, 0, 0, 0) 0px,
+          rgba(0, 0, 0, 0) 2px,
+          rgba(0, 0, 0, 0.05) 2px,
+          rgba(0, 0, 0, 0.05) 4px
+        );
+      }
+
+      /* ── Film grain ── */
+      #grain {
+        position: fixed;
+        inset: 0;
+        z-index: 6;
+        pointer-events: none;
+        opacity: 0.022;
+        animation: grainAnim 0.15s steps(1) infinite;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+      }
+      @keyframes grainAnim {
+        0% {
+          background-position: 0px 0px;
+        }
+        10% {
+          background-position: -50px -30px;
+        }
+        20% {
+          background-position: 30px 60px;
+        }
+        30% {
+          background-position: -80px 20px;
+        }
+        40% {
+          background-position: 40px -70px;
+        }
+        50% {
+          background-position: -20px 80px;
+        }
+        60% {
+          background-position: 60px -40px;
+        }
+        70% {
+          background-position: -40px 50px;
+        }
+        80% {
+          background-position: 70px 30px;
+        }
+        90% {
+          background-position: -60px -60px;
+        }
+        100% {
+          background-position: 20px 40px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="scroll-container">
+      <div id="canvas-wrapper">
+        <canvas id="c"></canvas>
+      </div>
+    </div>
+
+    <div id="scene-ui">
+      <div class="scene-title" id="title-0" style="left: 8vw; top: 38vh">
+        <p class="chapter">01 — entry</p>
+        <p class="name">The Corridor</p>
+        <p class="desc">a hallway with no end</p>
+      </div>
+      <div
+        class="scene-title"
+        id="title-1"
+        style="right: 8vw; top: 35vh; text-align: right"
+      >
+        <p class="chapter">02 — float</p>
+        <p class="name">Floating Room</p>
+        <p class="desc">gravity forgot this place</p>
+      </div>
+      <div class="scene-title" id="title-2" style="left: 8vw; bottom: 30vh">
+        <p class="chapter">03 — reflect</p>
+        <p class="name">The Mirror</p>
+        <p class="desc">what looks back</p>
+      </div>
+      <div
+        class="scene-title"
+        id="title-3"
+        style="right: 8vw; top: 40vh; text-align: right"
+      >
+        <p class="chapter">04 — memory</p>
+        <p class="name">VHS</p>
+        <p class="desc">tape distortion / signal decay</p>
+      </div>
+      <div
+        class="scene-title"
+        id="title-4"
+        style="
+          left: 50%;
+          top: 40vh;
+          transform: translateX(-50%);
+          text-align: center;
+        "
+      >
+        <p class="chapter">05 — void</p>
+        <p class="name">The Pool</p>
+        <p class="desc">still water — no bottom</p>
+      </div>
+    </div>
+
+    <div id="progress-bar">
+      <div class="dot active" id="dot-0"></div>
+      <div class="dot" id="dot-1"></div>
+      <div class="dot" id="dot-2"></div>
+      <div class="dot" id="dot-3"></div>
+      <div class="dot" id="dot-4"></div>
+    </div>
+
+    <div id="scroll-hint">
+      <p>scroll</p>
+      <span class="arrow">↓</span>
+    </div>
+
+    <div id="vhs-overlay"></div>
+    <div id="grain"></div>
+
+    <!-- Vite entry point -->
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

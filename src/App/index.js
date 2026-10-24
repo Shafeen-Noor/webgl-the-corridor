@@ -70,6 +70,18 @@ export class App {
     this._currentScene = 0;
 
     window.addEventListener('scroll', this._onScroll.bind(this));
+
+    // ── Reduced motion ─────────────────────────────────────
+    // Scrolling still moves the camera (the user controls it), but ambient
+    // animation, glitch effects and mouse parallax are switched off.
+    this._motionTime = 0;
+    this._motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    this._reducedMotion = this._motionQuery.matches;
+    this._camera.parallaxEnabled = !this._reducedMotion;
+    this._motionQuery.addEventListener('change', (event) => {
+      this._reducedMotion = event.matches;
+      this._camera.parallaxEnabled = !event.matches;
+    });
   }
 
   // ── Scroll handler ───────────────────────────────────────
@@ -90,7 +102,11 @@ export class App {
   _animate() {
     requestAnimationFrame(this._animate.bind(this));
     this._clock.update();
-    const t = this._clock.getElapsed();
+    // Ambient time only advances when motion is allowed, so shader and
+    // procedural animation freeze (without jumping) under reduced motion.
+    this._motionTime += this._reducedMotion ? 0 : this._clock.getDelta();
+    const t = this._motionTime;
+    const motion = !this._reducedMotion;
     // Smooth scroll
     this._scrollProgress = lerp(this._scrollProgress, this._targetScroll, 0.05);
 
@@ -135,10 +151,9 @@ export class App {
     this._vhs.children.forEach((child) => {
       if (child.material?.uniforms?.uTime) {
         child.material.uniforms.uTime.value = t;
-        child.material.uniforms.uIntensity.value = Math.min(
-          1,
-          Math.max(0, (this._scrollProgress - 0.5) * 4)
-        );
+        child.material.uniforms.uIntensity.value = motion
+          ? Math.min(1, Math.max(0, (this._scrollProgress - 0.5) * 4))
+          : 0; // no glitch/flicker under reduced motion
       }
     });
 
@@ -165,16 +180,18 @@ export class App {
     this._tableTop.position.y = 0.3 + Math.sin(t * 0.35) * 0.09;
 
     // Corridor dust — drift upward and wrap
-    const pAttr = this._particles.geometry.attributes.position;
-    for (let i = 0; i < this._particleCount; i++) {
-      pAttr.array[i * 3 + 1] += 0.001;
-      if (pAttr.array[i * 3 + 1] > 2) pAttr.array[i * 3 + 1] = -2;
+    if (motion) {
+      const pAttr = this._particles.geometry.attributes.position;
+      for (let i = 0; i < this._particleCount; i++) {
+        pAttr.array[i * 3 + 1] += 0.001;
+        if (pAttr.array[i * 3 + 1] > 2) pAttr.array[i * 3 + 1] = -2;
+      }
+      pAttr.needsUpdate = true;
     }
-    pAttr.needsUpdate = true;
 
     // VHS cassettes — float & spin (skip child[0] which is the TV)
     this._vhs.children.forEach((child, i) => {
-      if (child instanceof THREE.Mesh && i > 0) {
+      if (motion && child instanceof THREE.Mesh && i > 0) {
         child.position.y += Math.sin(t * 0.3 + i) * 0.001;
         child.rotation.y += 0.003;
       }
@@ -185,7 +202,7 @@ export class App {
 
     // Pool debris — gentle sway
     this._pool.children.forEach((child, i) => {
-      if (child instanceof THREE.Mesh && i > 1)
+      if (motion && child instanceof THREE.Mesh && i > 1)
         child.position.y += Math.sin(t * 0.2 + i) * 0.0005;
     });
 

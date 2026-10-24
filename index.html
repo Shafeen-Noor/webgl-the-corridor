@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="dreamcore — a scroll-driven WebGL experience built with Three.js and custom GLSL shaders." />
     <title>dreamcore — surreal memory</title>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Space+Mono&display=swap');
@@ -195,12 +196,49 @@
           background-position: 20px 40px;
         }
       }
+      /* ── Reduced motion: respect the OS-level preference ── */
+      @media (prefers-reduced-motion: reduce) {
+        #grain,
+        #scroll-hint {
+          animation: none;
+        }
+        .scene-title,
+        .scene-title.visible {
+          transform: none;
+          transition: opacity 0.2s ease;
+        }
+        .dot {
+          transition: none;
+        }
+      }
+
+      #webgl-error {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        text-align: center;
+        color: rgba(235, 228, 255, 0.92);
+        background: #1a1830;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+      #webgl-error.visible {
+        display: flex;
+      }
     </style>
   </head>
   <body>
     <div id="scroll-container">
       <div id="canvas-wrapper">
-        <canvas id="c"></canvas>
+        <canvas
+          id="c"
+          role="img"
+          aria-label="Interactive 3D scene: a surreal dreamlike corridor, floating room, mirror, VHS memory and pool. Scroll to move through it."
+        ></canvas>
       </div>
     </div>
 
@@ -249,7 +287,7 @@
       </div>
     </div>
 
-    <div id="progress-bar">
+    <div id="progress-bar" aria-hidden="true">
       <div class="dot active" id="dot-0"></div>
       <div class="dot" id="dot-1"></div>
       <div class="dot" id="dot-2"></div>
@@ -262,8 +300,20 @@
       <span class="arrow">↓</span>
     </div>
 
-    <div id="vhs-overlay"></div>
-    <div id="grain"></div>
+    <div id="vhs-overlay" aria-hidden="true"></div>
+    <div id="grain" aria-hidden="true"></div>
+
+    <div id="webgl-error" role="alert">
+      <p>
+        This experience needs WebGL, which your browser or device could not
+        start. Try a different browser or enable hardware acceleration.
+      </p>
+    </div>
+    <noscript>
+      <p style="color: #eee; padding: 2rem">
+        This experience needs JavaScript to run.
+      </p>
+    </noscript>
 
     <!-- Vite entry point -->
     <script type="module" src="./src/main.js"></script>

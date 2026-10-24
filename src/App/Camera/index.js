@@ -28,7 +28,8 @@ export class Camera {
     );
     this.instance.position.copy(WAYPOINTS[0].pos);
 
-    // Mouse parallax — raw and smoothed
+    // Mouse parallax — raw and smoothed (can be switched off for reduced motion)
+    this.parallaxEnabled = true;
     this._mouse = { x: 0, y: 0 };
     this._target = { x: 0, y: 0 };
 
@@ -74,8 +75,10 @@ export class Camera {
     lerpVec3(this._lookAtVec, wp0.target, wp1.target, ease);
 
     // Parallax nudge
-    this.instance.position.x += this._mouse.x * 0.25;
-    this.instance.position.y += -this._mouse.y * 0.15;
+    if (this.parallaxEnabled) {
+      this.instance.position.x += this._mouse.x * 0.25;
+      this.instance.position.y += -this._mouse.y * 0.15;
+    }
 
     this.instance.lookAt(this._lookAtVec);
   }
